@@ -3,6 +3,8 @@ from pyspark.sql import *
 from pyspark.sql.functions import *
 from prophecy.cb.ui.uispec import *
 from prophecy.cb.server.base.WorkflowContext import WorkflowContext
+from prophecy.cb.migration import PropertyMigrationObj
+
 class JDBC_Query(ComponentSpec):
     name: str = "JDBC_Query"
     category: str = "Custom"
@@ -15,6 +17,9 @@ class JDBC_Query(ComponentSpec):
         textUsername: Optional[str] = None
         textPassword: Optional[str] = None
         jdbcUrl: str = ""
+        secretUsername: SecretValue = field(default_factory=list)
+        secretPassword: SecretValue = field(default_factory=list)
+        secretJdbcUrl: SecretValue = field(default_factory=list)
         databaseName: Optional[str] = None
         dbtable: Optional[str] = None
         query: Optional[str] = None
@@ -42,39 +47,39 @@ class JDBC_Query(ComponentSpec):
                             .then(
                             ColumnsLayout(gap=("1rem"))
                                 .addColumn(
-                                TextBox("Username")
+                                SecretBox("Username")
                                     .bindPlaceholder("username")
-                                    .bindProperty("textUsername")
+                                    .bindProperty("secretUsername")
                             )
                                 .addColumn(
-                                TextBox("Password")
+                                SecretBox("Password")
                                     .isPassword()
                                     .bindPlaceholder("password")
-                                    .bindProperty("textPassword")
+                                    .bindProperty("secretPassword")
                             )
                         )
                             .otherwise(
                             ColumnsLayout(gap=("1rem"))
                                 .addColumn(
-                                TextBox("Username")
+                                SecretBox("Username")
                                     .bindPlaceholder("username")
-                                    .bindProperty("textUsername")
+                                    .bindProperty("secretUsername")
                             )
                                 .addColumn(
-                                TextBox("Password")
+                                SecretBox("Password")
                                     .bindPlaceholder("password")
-                                    .bindProperty("textPassword")
+                                    .bindProperty("secretPassword")
                             )
                         )
                     )
                 )
                     .addElement(TitleElement(title="URL"))
                     .addElement(
-                    TextBox("JDBC URL")
+                    SecretBox("JDBC URL")
                         .bindPlaceholder(
                         "jdbcHostname"
                     )
-                        .bindProperty("jdbcUrl")
+                        .bindProperty("secretJdbcUrl")
                 )
                     .addElement(
                     StackLayout()
@@ -99,26 +104,26 @@ class JDBC_Query(ComponentSpec):
         )
     def validate(self, context: WorkflowContext, component: Component[JDBC_QueryProperties]) -> List[Diagnostic]:
         diagnostics = []
-        if component.properties.textUsername is None:
+        if not component.properties.secretUsername.parts:
             diagnostics.append(
                 Diagnostic(
-                    "properties.textUsername",
+                    "properties.secretUsername",
                     "Username cannot be empty",
                     SeverityLevelEnum.Error,
                 )
             )
-        if component.properties.textPassword is None:
+        if not component.properties.secretPassword.parts:
             diagnostics.append(
                 Diagnostic(
-                    "properties.textPassword",
+                    "properties.secretPassword",
                     "Password cannot be empty",
                     SeverityLevelEnum.Error,
                 )
             )
-        if component.properties.jdbcUrl is None or component.properties.jdbcUrl == "":
+        if not component.properties.secretJdbcUrl.parts:
             diagnostics.append(
                 Diagnostic(
-                    "properties.jdbcUrl",
+                    "properties.secretJdbcUrl",
                     "JDBC URL cannot be empty",
                     SeverityLevelEnum.Error,
                 )
@@ -144,20 +149,21 @@ context: WorkflowContext,             oldState: Component[JDBC_QueryProperties],
             newState: Component[JDBC_QueryProperties],
     ) -> Component[JDBC_QueryProperties]:
         return newState
+    
     class JDBC_QueryCode(ComponentCode):
         def __init__(self, newProps):
             self.props: JDBC_Query.JDBC_QueryProperties = newProps
         def apply(self, spark: SparkSession):
             import pymysql
-            dbUser = self.props.textUsername
-            dbPassword = self.props.textPassword
+            dbUser = self.props.secretUsername
+            dbPassword = self.props.secretPassword
             if self.props.credType == "userPwdEnv":
                 import os
-                dbUser = os.environ[self.props.textUsername]
-                dbPassword = os.environ[self.props.textPassword]
+                dbUser = os.environ[self.props.secretUsername]
+                dbPassword = os.environ[self.props.secretPassword]
             if self.props.connect_timeout is not None:
                 connectionObject: SubstituteDisabled = pymysql.connect(
-                    host=self.props.jdbcUrl,
+                    host=self.props.secretJdbcUrl,
                     user=dbUser,
                     password=dbPassword,
                     db=self.props.databaseName,
@@ -165,7 +171,7 @@ context: WorkflowContext,             oldState: Component[JDBC_QueryProperties],
                 )
             else:
                 connectionObject: SubstituteDisabled = pymysql.connect(
-                    host=self.props.jdbcUrl,
+                    host=self.props.secretJdbcUrl,
                     user=dbUser,
                     password=dbPassword,
                     db=self.props.databaseName,
@@ -179,3 +185,38 @@ context: WorkflowContext,             oldState: Component[JDBC_QueryProperties],
                 raise e
             finally:
                 connectionObject.close()
+
+    def __init__(self):
+        super().__init__()
+        self.registerPropertyEvolution(JDBC_QueryCode_PropertyMigration())
+
+class JDBC_QueryCode_PropertyMigration(PropertyMigrationObj):
+
+    def migrationNumber(self) -> int:
+        return 1
+
+    def up(self, old_properties: JDBC_Query.JDBC_QueryProperties) -> JDBC_Query.JDBC_QueryProperties:
+        credType = old_properties.credType
+
+        if credType == "userPwd":
+            creds = (SecretValuePart.convertTextToSecret(old_properties.textUsername),
+                     SecretValuePart.convertTextToSecret(old_properties.textPassword))
+        elif credType == "userPwdEnv":
+            creds = ([VaultSecret("Environment", "", "0", None, old_properties.textUsername)],
+                     [VaultSecret("Environment", "", "0", None, old_properties.textPassword)])
+        else:
+            raise Exception("Invalid credType:" + credType)
+
+        return dataclasses.replace(
+            old_properties,
+            credType="",
+            textUsername=None,
+            textPassword=None,
+            jdbcUrl="",
+            secretUsername=SecretValue(creds[0]),
+            secretPassword=SecretValue(creds[1]),
+            secretJdbcUrl=SecretValue(SecretValuePart.convertTextToSecret(old_properties.jdbcUrl))
+        )
+
+    def down(self, new_properties: JDBC_Query.JDBC_QueryProperties) -> JDBC_Query.JDBC_QueryProperties:
+        raise Exception("Downgrade is not implemented for this JDBC version")
