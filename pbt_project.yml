@@ -1,6 +1,6 @@
 name: jdbc_project_1
 description: ''
-version: '0.1'
+version: '0.2'
 author: shashank@prophecy.io
 language: python
 buildSystem: ''
