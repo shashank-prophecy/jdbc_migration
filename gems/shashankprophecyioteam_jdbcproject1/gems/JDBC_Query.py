@@ -33,18 +33,6 @@ class JDBC_Query(ComponentSpec):
                     .addElement(
                     StackLayout()
                         .addElement(
-                        RadioGroup("Credentials")
-                            .addOption("Username & Password", "userPwd")
-                            .addOption("Environment variables", "userPwdEnv")
-                            .bindProperty("credType")
-                    )
-                        .addElement(
-                        Condition()
-                            .ifEqual(
-                            PropExpr("component.properties.credType"),
-                            StringExpr("userPwd"),
-                        )
-                            .then(
                             ColumnsLayout(gap=("1rem"))
                                 .addColumn(
                                 SecretBox("Username")
@@ -57,20 +45,6 @@ class JDBC_Query(ComponentSpec):
                                     .bindPlaceholder("password")
                                     .bindProperty("secretPassword")
                             )
-                        )
-                            .otherwise(
-                            ColumnsLayout(gap=("1rem"))
-                                .addColumn(
-                                SecretBox("Username")
-                                    .bindPlaceholder("username")
-                                    .bindProperty("secretUsername")
-                            )
-                                .addColumn(
-                                SecretBox("Password")
-                                    .bindPlaceholder("password")
-                                    .bindProperty("secretPassword")
-                            )
-                        )
                     )
                 )
                     .addElement(TitleElement(title="URL"))
