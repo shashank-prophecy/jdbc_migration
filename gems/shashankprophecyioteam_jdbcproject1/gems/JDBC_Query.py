@@ -1,4 +1,5 @@
 from prophecy.cb.server.base.ComponentBuilderBase import *
+from prophecy.cb.server.base.DatasetBuilderBase import DatasetSpec, DatasetProperties, Component
 from pyspark.sql import *
 from pyspark.sql.functions import *
 from prophecy.cb.ui.uispec import *
@@ -76,7 +77,7 @@ class JDBC_Query(ComponentSpec):
                 "5fr",
             )
         )
-    def validate(self, context: WorkflowContext, component: Component[JDBC_QueryProperties]) -> List[Diagnostic]:
+    def validate(self, context: WorkflowContext, component: Component) -> list:
         diagnostics = []
         if not component.properties.secretUsername.parts:
             diagnostics.append(
@@ -117,11 +118,8 @@ class JDBC_Query(ComponentSpec):
                 )
             )
         return diagnostics
-    def onChange(
-            self,
-context: WorkflowContext,             oldState: Component[JDBC_QueryProperties],
-            newState: Component[JDBC_QueryProperties],
-    ) -> Component[JDBC_QueryProperties]:
+    
+    def onChange( self, context: WorkflowContext, oldState: Component, newState: Component) -> Component:
         return newState
     
     class JDBC_QueryCode(ComponentCode):
