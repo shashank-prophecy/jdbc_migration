@@ -80,44 +80,44 @@ class JDBC_Query(ComponentSpec):
     def validate(self, context: WorkflowContext, component: Component) -> list:
         diagnostics = []
 
-        # if not component.properties.secretUsername.parts:
-        #     diagnostics.append(
-        #         Diagnostic(
-        #             "properties.secretUsername",
-        #             "Username cannot be empty",
-        #             SeverityLevelEnum.Error,
-        #         )
-        #     )
-        # if not component.properties.secretPassword.parts:
-        #     diagnostics.append(
-        #         Diagnostic(
-        #             "properties.secretPassword",
-        #             "Password cannot be empty",
-        #             SeverityLevelEnum.Error,
-        #         )
-        #     )
-        # if not component.properties.secretJdbcUrl.parts:
-        #     diagnostics.append(
-        #         Diagnostic(
-        #             "properties.secretJdbcUrl",
-        #             "JDBC URL cannot be empty",
-        #             SeverityLevelEnum.Error,
-        #         )
-        #     )
-        # if component.properties.databaseName is None:
-        #     diagnostics.append(
-        #         Diagnostic(
-        #             "properties.databaseName",
-        #             "Database name cannot be empty",
-        #             SeverityLevelEnum.Error,
-        #         )
-        #     )
-        # if component.properties.query is None:
-        #     diagnostics.append(
-        #         Diagnostic(
-        #             "properties.query", "Query cannot be empty", SeverityLevelEnum.Error
-        #         )
-        #     )
+        if not component.properties.secretUsername.parts:
+            diagnostics.append(
+                Diagnostic(
+                    "properties.secretUsername",
+                    "Username cannot be empty",
+                    SeverityLevelEnum.Error,
+                )
+            )
+        if not component.properties.secretPassword.parts:
+            diagnostics.append(
+                Diagnostic(
+                    "properties.secretPassword",
+                    "Password cannot be empty",
+                    SeverityLevelEnum.Error,
+                )
+            )
+        if not component.properties.secretJdbcUrl.parts:
+            diagnostics.append(
+                Diagnostic(
+                    "properties.secretJdbcUrl",
+                    "JDBC URL cannot be empty",
+                    SeverityLevelEnum.Error,
+                )
+            )
+        if component.properties.databaseName is None:
+            diagnostics.append(
+                Diagnostic(
+                    "properties.databaseName",
+                    "Database name cannot be empty",
+                    SeverityLevelEnum.Error,
+                )
+            )
+        if component.properties.query is None:
+            diagnostics.append(
+                Diagnostic(
+                    "properties.query", "Query cannot be empty", SeverityLevelEnum.Error
+                )
+            )
         return diagnostics
     
     def onChange( self, context: WorkflowContext, oldState: Component, newState: Component) -> Component:
