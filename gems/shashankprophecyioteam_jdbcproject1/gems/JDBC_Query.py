@@ -1,5 +1,4 @@
 from prophecy.cb.server.base.ComponentBuilderBase import *
-from prophecy.cb.server.base.DatasetBuilderBase import DatasetSpec, DatasetProperties, Component
 from pyspark.sql import *
 from pyspark.sql.functions import *
 from prophecy.cb.ui.uispec import *
@@ -79,6 +78,7 @@ class JDBC_Query(ComponentSpec):
         )
     def validate(self, context: WorkflowContext, component: Component) -> list:
         diagnostics = []
+
         if not component.properties.secretUsername.parts:
             diagnostics.append(
                 Diagnostic(
@@ -125,14 +125,17 @@ class JDBC_Query(ComponentSpec):
     class JDBC_QueryCode(ComponentCode):
         def __init__(self, newProps):
             self.props: JDBC_Query.JDBC_QueryProperties = newProps
+
         def apply(self, spark: SparkSession):
             import pymysql
             dbUser = self.props.secretUsername
             dbPassword = self.props.secretPassword
+
             if self.props.credType == "userPwdEnv":
                 import os
                 dbUser = os.environ[self.props.secretUsername]
                 dbPassword = os.environ[self.props.secretPassword]
+
             if self.props.connect_timeout is not None:
                 connectionObject: SubstituteDisabled = pymysql.connect(
                     host=self.props.secretJdbcUrl,
