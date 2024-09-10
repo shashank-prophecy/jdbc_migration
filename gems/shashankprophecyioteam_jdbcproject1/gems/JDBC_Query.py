@@ -1,3 +1,4 @@
+import dataclasses
 from prophecy.cb.server.base.ComponentBuilderBase import *
 from pyspark.sql import *
 from pyspark.sql.functions import *
