@@ -118,6 +118,17 @@ class JDBC_Query(ComponentSpec):
                     "properties.query", "Query cannot be empty", SeverityLevelEnum.Error
                 )
             )
+
+        if any(isinstance(x, TextSecret) and x.value for x in component.properties.secretUsername.parts):
+            diagnostics.append(Diagnostic("properties.secretUsername",
+                                          "Storing plain-text username poses a security risk and is not recommended. Please see https://docs.prophecy.io/low-code-spark/best-practices/use-dbx-secrets for suggested alternatives",
+                                          SeverityLevelEnum.Error))
+
+        if any(isinstance(x, TextSecret) and x.value for x in component.properties.secretPassword.parts):
+            diagnostics.append(Diagnostic("properties.secretPassword",
+                                          "Storing plain-text passwords poses a security risk and is not recommended. Please see https://docs.prophecy.io/low-code-spark/best-practices/use-dbx-secrets for suggested alternatives",
+                                          SeverityLevelEnum.Error))
+                                          
         return diagnostics
     
     def onChange( self, context: WorkflowContext, oldState: Component, newState: Component) -> Component:
